@@ -2,7 +2,7 @@
 'use strict'
 
 import Player from '@vimeo/player'
-import { fetchData, createFrag, hasEl } from './utils'
+import { fetchData, createFrag, hasEl, orderList } from './utils'
 import playlistTmpl from './plist.tmpl'
 
 /**
@@ -15,7 +15,6 @@ import playlistTmpl from './plist.tmpl'
   muted: true,
   controls: true,
   autoplay: true,
-  shuffle: false,
   color: '#7B8EF9',
   fullscreenToggle:  '#js-vp-fstoggle',
   fullscreenToggleKeyCode: 'Digit1',
@@ -25,6 +24,7 @@ import playlistTmpl from './plist.tmpl'
   playlistNavPrev: '#js-vp-prev',
   supportsKeyNav: true,
   playlist: [],
+  vidsToAppend: [],
   playlistTmpl: playlistTmpl
 }
 
@@ -102,8 +102,7 @@ VimeoPlaylist.prototype = {
     if (!this.player) return
     this.settings()
     this.listeners()
-    if (this.hasPlaylist) this.buildOrderedPlaylist()
-    // if (this.hasPlaylist) this.buildPlaylist()
+    if (this.hasPlaylist) this.buildPlaylist()
   },
 
   /**
@@ -219,55 +218,40 @@ VimeoPlaylist.prototype = {
       let vidInfo = fetchData('https://vimeo.com/api/v2/video/' + id + '.json')
       // if (!vidInfo) return
       vidInfo.then((obj) => {
-        counter++
-        let tmpl = this.playlistTmpl(obj[0])
-        //let tmpl = plistItemTemplate(obj[0])
-        let frag = createFrag(tmpl, 'article', 'plist-item')
+        // Get key of Plist from original playlist and add it to vidInfo
+        plistKey = this.playlist.findIndex(item => item.id === plist.id);
+        // vidInfo['key'] = this.playlist.findIndex(item => item.id === plist.id);
 
-        if (this.playlistOutput) {
-          this.playlistOutput.appendChild(frag)
-        } else {
-          console.warn('VimeoPlaylist: Provide a valid playlist id')
-        }
-
-        if (counter === this.vidCount) {
-          this.setupFirstVid()
-          // define this.playlistItems
-          if (!this.hasPlaylist) return
-          this.playlistItems = document.querySelectorAll('.plist-item__link')
-          this.handlePlaylistClicks()
-        }
+        this.vidsToAppend[plistKey] = obj[0]
       })
     })
-  },
-  buildOrderedPlaylist() {
-    let counter = 0
+    
 
-    this.playlist.forEach((plist) => {
-      let id = plist.id
-      let vidInfo = fetchData('https://vimeo.com/api/v2/video/' + id + '.json')
-      // if (!vidInfo) return
-      vidInfo.then((obj) => {
-        counter++
-        let tmpl = this.playlistTmpl(obj[0])
-        //let tmpl = plistItemTemplate(obj[0])
-        let frag = createFrag(tmpl, 'article', 'plist-item')
+    this.vidsToAppend.forEach((obj) => {
+      console.log('here')
+      console.log(obj)
 
-        if (this.playlistOutput) {
-          this.playlistOutput.appendChild(frag)
-        } else {
-          console.warn('VimeoPlaylist: Provide a valid playlist id')
-        }
+      counter++
+      let tmpl = this.playlistTmpl(obj[0])
+      //let tmpl = plistItemTemplate(obj[0])
+      let frag = createFrag(tmpl, 'article', 'plist-item')
 
-        if (counter === this.vidCount) {
-          this.setupFirstVid()
-          // define this.playlistItems
-          if (!this.hasPlaylist) return
-          this.playlistItems = document.querySelectorAll('.plist-item__link')
-          this.handlePlaylistClicks()
-        }
-      })
+
+      if (this.playlistOutput) {
+        this.playlistOutput.appendChild(frag)
+      } else {
+        console.warn('VimeoPlaylist: Provide a valid playlist id')
+      }
+
+      if (counter === this.vidCount) {
+        this.setupFirstVid()
+        // define this.playlistItems
+        if (!this.hasPlaylist) return
+        this.playlistItems = document.querySelectorAll('.plist-item__link')
+        this.handlePlaylistClicks()
+      }
     })
+
   },
 
   /**
@@ -415,7 +399,6 @@ VimeoPlaylist.prototype = {
     }
   }
 }
-
 
 
 export default VimeoPlaylist
