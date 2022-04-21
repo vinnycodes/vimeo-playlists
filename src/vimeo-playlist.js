@@ -8,7 +8,7 @@ import playlistTmpl from './plist.tmpl'
 /**
  * Default Options
  */
- VimeoPlaylist.defaults = {
+VimeoPlaylist.defaults = {
   width: 900,
   loop: false,
   title: false,
@@ -17,7 +17,7 @@ import playlistTmpl from './plist.tmpl'
   autoplay: true,
   shuffle: false,
   color: '#7B8EF9',
-  fullscreenToggle:  '#js-vp-fstoggle',
+  fullscreenToggle: '#js-vp-fstoggle',
   fullscreenToggleKeyCode: 'Digit1',
   hasPlaylist: true,
   playlistOutput: '#js-vp-playlist',
@@ -102,8 +102,7 @@ VimeoPlaylist.prototype = {
     if (!this.player) return
     this.settings()
     this.listeners()
-    if (this.hasPlaylist) this.buildOrderedPlaylist()
-    // if (this.hasPlaylist) this.buildPlaylist()
+    if (this.hasPlaylist) this.buildPlaylist()
   },
 
   /**
@@ -139,7 +138,7 @@ VimeoPlaylist.prototype = {
       .then(() => {
         this.setActiveState()
       })
-      .catch((err) => {
+      .catch(err => {
         // @todo better error handling
         console.error(err, 'error loading video')
       })
@@ -189,7 +188,7 @@ VimeoPlaylist.prototype = {
     if (this.fullscreenToggleKeyCode) {
       window.addEventListener(
         'keydown',
-        (e) => {
+        e => {
           if (e.code === this.fullscreenToggleKeyCode) this.toggleFullscreen()
         },
         false
@@ -197,10 +196,34 @@ VimeoPlaylist.prototype = {
     }
     // FS Toggle Click
     if (hasEl(`#${this.fullscreenToggle.id}`)) {
-      this.fullscreenToggle.addEventListener('click', (e) => {
+      this.fullscreenToggle.addEventListener('click', e => {
         e.preventDefault()
         this.toggleFullscreen()
       })
+    }
+  },
+
+  /**
+   * Create Template
+   * Constructs playlist markup from this.playlist
+   * @fires {toggleFullscreen} - if fullscreenToggle
+   */
+  createTemplate(obj, counter) {
+    let tmpl = this.playlistTmpl(obj[0])
+    let frag = createFrag(tmpl, 'article', 'plist-item')
+
+    if (this.playlistOutput) {
+      this.playlistOutput.appendChild(frag)
+    } else {
+      console.warn('VimeoPlaylist: Provide a valid playlist id')
+    }
+
+    if (counter === this.vidCount) {
+      this.setupFirstVid()
+      // define this.playlistItems
+      if (!this.hasPlaylist) return
+      this.playlistItems = document.querySelectorAll('.plist-item__link')
+      this.handlePlaylistClicks()
     }
   },
 
@@ -214,64 +237,32 @@ VimeoPlaylist.prototype = {
   buildPlaylist() {
     let counter = 0
 
-    this.playlist.forEach((plist) => {
-      let id = plist.id
-      let vidInfo = fetchData('https://vimeo.com/api/v2/video/' + id + '.json')
-      // if (!vidInfo) return
-      vidInfo.then((obj) => {
-        counter++
-        let tmpl = this.playlistTmpl(obj[0])
-        //let tmpl = plistItemTemplate(obj[0])
-        let frag = createFrag(tmpl, 'article', 'plist-item')
-
-        if (this.playlistOutput) {
-          this.playlistOutput.appendChild(frag)
-        } else {
-          console.warn('VimeoPlaylist: Provide a valid playlist id')
-        }
-
-        if (counter === this.vidCount) {
-          this.setupFirstVid()
-          // define this.playlistItems
-          if (!this.hasPlaylist) return
-          this.playlistItems = document.querySelectorAll('.plist-item__link')
-          this.handlePlaylistClicks()
-        }
+    if (this.shuffle) {
+      // Playlist created with no order - shuffled 
+      this.playlist.forEach(plist => {
+        let id = plist.id
+        let vidInfo = fetchData(
+          'https://vimeo.com/api/v2/video/' + id + '.json'
+        )
+        // if (!vidInfo) return
+        vidInfo.then(obj => {
+          this.createTemplate(obj, counter)
+        })
       })
-    })
-  },
-  buildOrderedPlaylist() {
-    let counter = 0
-
-    const promises = this.playlist.map( (plist, i) => {
-      
-      return fetchData('https://vimeo.com/api/v2/video/' + plist.id + '.json')
-
-    })
-
-    Promise.all(promises).then((vidsToAppend) => {
-
-      vidsToAppend.forEach(obj => {
-          counter++ 
-          let tmpl = this.playlistTmpl(obj[0])
-          //let tmpl = plistItemTemplate(obj[0])
-          let frag = createFrag(tmpl, 'article', 'plist-item')
-
-          if (this.playlistOutput) {
-            this.playlistOutput.appendChild(frag)
-          } else {
-            console.warn('VimeoPlaylist: Provide a valid playlist id')
-          }
-
-          if (counter === this.vidCount) {
-            this.setupFirstVid()
-            // define this.playlistItems
-            if (!this.hasPlaylist) return
-            this.playlistItems = document.querySelectorAll('.plist-item__link')
-            this.handlePlaylistClicks()
-          }
+    } else {
+      // Playlist created in order of original playlsit.json - not shuffled
+      // Set an array of Promises
+      const promises = this.playlist.map((plist, i) => {
+        return fetchData('https://vimeo.com/api/v2/video/' + plist.id + '.json')
       })
-    })
+
+      // Promises to run all at the same time and return in the same order as original array
+      Promise.all(promises).then(vidsToAppend => {
+        vidsToAppend.forEach(obj => {
+          this.createTemplate(obj, counter)
+        })
+      })
+    }
   },
 
   /**
@@ -282,7 +273,7 @@ VimeoPlaylist.prototype = {
   setupFirstVid() {
     if (!this.playlistItems) return
     this.playlistItems[0].classList.add(this.activeClass)
-    this.player.element.setAttribute("allow", "autoplay")
+    this.player.element.setAttribute('allow', 'autoplay')
     this.player['play']()
   },
 
@@ -294,12 +285,12 @@ VimeoPlaylist.prototype = {
    */
   handlePlaylistClicks() {
     this.playlistItems.forEach((item, i) => {
-      item.addEventListener('click', (e) => {
+      item.addEventListener('click', e => {
         e.preventDefault()
         this.currentVidIdx = i
         this.play(this.currentVidIdx)
       })
-      item.addEventListener('keydown', (e) => {
+      item.addEventListener('keydown', e => {
         if (e.code === 'Enter') {
           this.currentVidIdx = i
           this.play(this.currentVidIdx)
@@ -314,13 +305,13 @@ VimeoPlaylist.prototype = {
    */
   handleNavClicks() {
     if (hasEl(`#${this.playlistNavPrev.id}`)) {
-      this.playlistNavPrev.addEventListener('click', (e) => {
+      this.playlistNavPrev.addEventListener('click', e => {
         e.preventDefault()
         this.prev()
       })
     }
     if (hasEl(`#${this.playlistNavNext.id}`)) {
-      this.playlistNavNext.addEventListener('click', (e) => {
+      this.playlistNavNext.addEventListener('click', e => {
         e.preventDefault()
         this.next()
       })
@@ -328,15 +319,15 @@ VimeoPlaylist.prototype = {
   },
 
   /**
-   * Handle Key Navigation 
+   * Handle Key Navigation
    * Keydown listener for next/prev arrow keys control
    */
   handleKeyNav() {
     document.addEventListener(
-      "keydown",
-      (event) => {
-        if (event.code == "ArrowRight") this.next();
-        if (event.code == "ArrowLeft") this.prev();
+      'keydown',
+      event => {
+        if (event.code == 'ArrowRight') this.next()
+        if (event.code == 'ArrowLeft') this.prev()
       },
       false
     )
@@ -419,7 +410,5 @@ VimeoPlaylist.prototype = {
     }
   }
 }
-
-
 
 export default VimeoPlaylist
