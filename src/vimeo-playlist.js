@@ -102,7 +102,8 @@ VimeoPlaylist.prototype = {
     if (!this.player) return
     this.settings()
     this.listeners()
-    if (this.hasPlaylist) this.buildPlaylist()
+    if (this.hasPlaylist && this.shuffle) this.buildPlaylist()
+    if (this.hasPlaylist && !this.shuffle) this.buildOrderedPlaylist()
   },
 
   /**
@@ -204,65 +205,73 @@ VimeoPlaylist.prototype = {
   },
 
   /**
-   * Create Template
-   * Constructs playlist markup from this.playlist
-   * @fires {toggleFullscreen} - if fullscreenToggle
-   */
-  createTemplate(obj, counter) {
-    let tmpl = this.playlistTmpl(obj[0])
-    let frag = createFrag(tmpl, 'article', 'plist-item')
-
-    if (this.playlistOutput) {
-      this.playlistOutput.appendChild(frag)
-    } else {
-      console.warn('VimeoPlaylist: Provide a valid playlist id')
-    }
-
-    if (counter === this.vidCount) {
-      this.setupFirstVid()
-      // define this.playlistItems
-      if (!this.hasPlaylist) return
-      this.playlistItems = document.querySelectorAll('.plist-item__link')
-      this.handlePlaylistClicks()
-    }
-  },
-
-  /**
    * Build Playlist
    * Constructs playlist markup from this.playlist
    * Fetches playlist info from Vimeo API
    * @external { fetchData | createFrag }
    * @fires { setupFirstVid | handlePlaylistClicks}
    */
-  buildPlaylist() {
+   buildPlaylist() {
     let counter = 0
 
-    if (this.shuffle) {
-      // Playlist created with no order - shuffled 
-      this.playlist.forEach(plist => {
-        let id = plist.id
-        let vidInfo = fetchData(
-          'https://vimeo.com/api/v2/video/' + id + '.json'
-        )
-        // if (!vidInfo) return
-        vidInfo.then(obj => {
-          this.createTemplate(obj, counter)
-        })
-      })
-    } else {
-      // Playlist created in order of original playlsit.json - not shuffled
-      // Set an array of Promises
-      const promises = this.playlist.map((plist, i) => {
-        return fetchData('https://vimeo.com/api/v2/video/' + plist.id + '.json')
-      })
+    this.playlist.forEach((plist) => {
+      let id = plist.id
+      let vidInfo = fetchData('https://vimeo.com/api/v2/video/' + id + '.json')
+      // if (!vidInfo) return
+      vidInfo.then((obj) => {
+        counter++
+        let tmpl = this.playlistTmpl(obj[0])
+        //let tmpl = plistItemTemplate(obj[0])
+        let frag = createFrag(tmpl, 'article', 'plist-item')
 
-      // Promises to run all at the same time and return in the same order as original array
-      Promise.all(promises).then(vidsToAppend => {
-        vidsToAppend.forEach(obj => {
-          this.createTemplate(obj, counter)
-        })
+        if (this.playlistOutput) {
+          this.playlistOutput.appendChild(frag)
+        } else {
+          console.warn('VimeoPlaylist: Provide a valid playlist id')
+        }
+
+        if (counter === this.vidCount) {
+          this.setupFirstVid()
+          // define this.playlistItems
+          if (!this.hasPlaylist) return
+          this.playlistItems = document.querySelectorAll('.plist-item__link')
+          this.handlePlaylistClicks()
+        }
       })
-    }
+    })
+  },
+  buildOrderedPlaylist() {
+    let counter = 0
+
+    const promises = this.playlist.map( (plist, i) => {
+      
+      return fetchData('https://vimeo.com/api/v2/video/' + plist.id + '.json')
+
+    })
+
+    Promise.all(promises).then((vidsToAppend) => {
+
+      vidsToAppend.forEach(obj => {
+          counter++ 
+          let tmpl = this.playlistTmpl(obj[0])
+          //let tmpl = plistItemTemplate(obj[0])
+          let frag = createFrag(tmpl, 'article', 'plist-item')
+
+          if (this.playlistOutput) {
+            this.playlistOutput.appendChild(frag)
+          } else {
+            console.warn('VimeoPlaylist: Provide a valid playlist id')
+          }
+
+          if (counter === this.vidCount) {
+            this.setupFirstVid()
+            // define this.playlistItems
+            if (!this.hasPlaylist) return
+            this.playlistItems = document.querySelectorAll('.plist-item__link')
+            this.handlePlaylistClicks()
+          }
+      })
+    })
   },
 
   /**

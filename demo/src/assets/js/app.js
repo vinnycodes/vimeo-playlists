@@ -11,11 +11,11 @@ import playlistTmpl from './plist.tmpl'
 
 // Plugin Options
 let options = {
+  muted: false,
   hasPlaylist: true,
   playlist: data,
   playlistOutput: '#js-vp-playlist',
   color: '#6c77f7',
-  shuffle: false,
   fullscreenToggle:  '#js-vp-fstoggle',
   fullscreenToggleKeyCode: 'Digit1',
   playlistTmpl: playlistTmpl
