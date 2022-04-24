@@ -1,0 +1,40 @@
+.current-vid {
+
+  @extend %grid;
+  @media (min-width: $mq-lg) {
+    max-width: $grid-max-width-md;
+  }
+  @media (min-width: $mq-xl2) {
+    max-width: $grid-max-width-lg;
+  }
+
+  &__nowPlaying,
+  &__currentTitle {
+    color: white !important;
+  }
+
+  &__eyebrow {
+    padding-bottom: 4px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  &__eyebrow,
+  &__currentTitle,
+  &__description {
+    margin-bottom: 0;
+  }
+
+  &__content {
+    opacity: 0;
+  }
+
+  &__content.-fadeDown {
+    animation-duration: 1s;
+    animation-fill-mode: both;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-name: fade-down;
+    -webkit-animation-name: fade-down;
+  }
+}

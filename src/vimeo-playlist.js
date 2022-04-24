@@ -4,6 +4,7 @@
 import Player from '@vimeo/player'
 import { fetchData, createFrag, hasEl } from './utils'
 import playlistTmpl from './plist.tmpl'
+import nowPlayingTmpl from './nowPlaying.tmpl'
 
 /**
  * Default Options
@@ -16,16 +17,19 @@ VimeoPlaylist.defaults = {
   controls: true,
   autoplay: true,
   shuffle: false,
+  description: true, 
   color: '#7B8EF9',
   fullscreenToggle: '#js-vp-fstoggle',
   fullscreenToggleKeyCode: 'Digit1',
   hasPlaylist: true,
+  descriptionOutput: '#js-vp-description',
   playlistOutput: '#js-vp-playlist',
   playlistNavNext: '#js-vp-next',
   playlistNavPrev: '#js-vp-prev',
   supportsKeyNav: true,
   playlist: [],
-  playlistTmpl: playlistTmpl
+  playlistTmpl: playlistTmpl,
+  nowPlayingTmpl: nowPlayingTmpl
 }
 
 /**
@@ -46,6 +50,7 @@ function VimeoPlaylist(el, options) {
   if (!this.hasPlayerId(el)) return
 
   this.hasPlaylist = this.hasPlaylist
+  this.descriptionOutput = document.querySelector(this.descriptionOutput)
   this.playlistOutput = document.querySelector(this.playlistOutput)
   this.playlistNavPrev = document.querySelector(this.playlistNavPrev)
   this.playlistNavNext = document.querySelector(this.playlistNavNext)
@@ -232,6 +237,7 @@ VimeoPlaylist.prototype = {
 
         if (counter === this.vidCount) {
           this.setupFirstVid()
+          this.currentVideoDescription()
           // define this.playlistItems
           if (!this.hasPlaylist) return
           this.playlistItems = document.querySelectorAll('.plist-item__link')
@@ -265,6 +271,7 @@ VimeoPlaylist.prototype = {
 
           if (counter === this.vidCount) {
             this.setupFirstVid()
+            this.currentVideoDescription()
             // define this.playlistItems
             if (!this.hasPlaylist) return
             this.playlistItems = document.querySelectorAll('.plist-item__link')
@@ -297,11 +304,13 @@ VimeoPlaylist.prototype = {
       item.addEventListener('click', e => {
         e.preventDefault()
         this.currentVidIdx = i
+        this.currentVideoDescription()
         this.play(this.currentVidIdx)
       })
       item.addEventListener('keydown', e => {
         if (e.code === 'Enter') {
           this.currentVidIdx = i
+          this.currentVideoDescription()
           this.play(this.currentVidIdx)
         }
       })
@@ -417,6 +426,35 @@ VimeoPlaylist.prototype = {
         document.exitFullscreen()
       }
     }
+  },
+
+  /**
+   * Current Video Description
+   * Creates the current loaded video description
+   */
+  currentVideoDescription() {
+
+    console.log('here')
+    let removeChild = document.querySelector('.current-vid__content');
+
+    const id = this.playlist[this.currentVidIdx].id
+    let vidInfo = fetchData('https://vimeo.com/api/v2/video/' + id + '.json')
+
+    vidInfo.then((obj) => {
+        let tmpl = this.nowPlayingTmpl(obj[0])
+        let frag = createFrag(tmpl, 'div', 'current-vid__content')
+
+        if (this.descriptionOutput) {
+          this.descriptionOutput.removeChild(removeChild)
+          this.descriptionOutput.appendChild(frag)
+          
+          // Add animation to Fade In 
+          let fadeIn = document.querySelector('.current-vid__content')
+          setTimeout(()=> fadeIn.classList.add("-fadeDown"), 500);
+        } else {
+          console.warn('VimeoPlaylist: Provide a valid playlist id')
+        }
+    })
   }
 }
 
